@@ -1,40 +1,34 @@
 # My Python Projects
 
-Hi! I'm **Bhaskar Bahukhandi**, a second-year BTech CSE (AI & ML) student at Graphic Era Deemed University. 
+Hi! I'm **Bhaskar Bahukhandi**, a second-year (3rd semester) BTech CSE (AI & ML) student at Graphic Era Deemed University. 
 
-This repository contains some of the initial Python projects I built while getting hands-on with programming, logic building, and basic computer science concepts. I made these to practice what I'm learning and to get comfortable writing actual code instead of just reading theory.
+This repository contains some of my Python projects. I'm actively building these to practice backend architecture, databases, and actual machine learning algorithms from scratch.
 
 ---
 
-## 1. AI Chatbot
-A conversational terminal-based chatbot written entirely in Python. I built this to understand string parsing, input handling, and control flow. 
+## 1. AI Chatbot (Custom Machine Learning Edition)
+A conversational terminal-based chatbot. I originally built this using simple keyword matching, but I recently upgraded it to use a **Custom Machine Learning Intent Classifier** that I wrote entirely from scratch without relying on external libraries like `scikit-learn`!
 
-**What it can do:**
-- Hold a basic conversation using keyword matching
-- Tell programming jokes and tech facts
-- Perform basic mathematical calculations
-- Run a 5-question tech quiz and keep score
-- Tell the current time and date
+**What it does & How it works:**
+- I implemented a custom **Bag-of-Words** text vectorizer to convert training sentences into numerical arrays.
+- I wrote a **Cosine Similarity** algorithm (calculating the dot product and magnitudes) to classify user input against 10 different intents.
+- It can handle greetings, tell jokes, give tech facts, calculate math, run a quiz, and answer basic questions.
 
-*Note: It's currently rule-based, but I plan to eventually upgrade this to use real Natural Language Processing (NLP) or an API*
+## 2. Student Data Management System (SQLite Edition)
+A console-based CRUD application that manages student records. 
 
-## 2. Student Data Management System
-A console-based CRUD (Create, Read, Update, Delete) application. I built this to practice working with Python dictionaries, lists, and File I/O.
-
-**What it can do:**
-- **Add** new student records (with basic phone number validation)
-- **View** all students in a formatted table
-- **Search** for specific students by Roll Number or partial Name
-- **Update** or **Delete** existing records
-- **View Statistics** like average marks, highest scorer, and pass/fail counts
-- Saves everything to a `students.json` file so data isn't lost when the program closes.
+**What it does & How it works:**
+- Connects to a local **SQLite3 database** to persistently store data.
+- I wrote custom SQL queries (`INSERT`, `SELECT`, `UPDATE`, `DELETE`) to handle all backend operations instead of relying on simple text files.
+- Features robust input validation (phone numbers, marks, semesters).
+- Includes a statistics engine that calculates average marks, highest scorers, and branch-wise distributions dynamically from the SQL data.
 
 ---
 
 ## Future Roadmap
-These projects are just the starting point of my coding journey. As I learn more advanced concepts in my degree, my plan is to continuously come back and upgrade this repository. Some things I want to add in the near future:
-- Refactoring the code to use Object-Oriented Programming (OOP) principles.
-- Swapping out the JSON file storage for a real relational database like SQLite or MySQL.
+I plan to continuously upgrade these projects as I progress through my degree. Some things I want to add in the near future:
+- Converting the Chatbot's custom ML classifier into a Neural Network (using PyTorch/TensorFlow).
+- Moving the Student Manager from SQLite to a cloud database (like PostgreSQL or Firebase) with a proper REST API.
 - Adding Graphical User Interfaces (GUIs) instead of just using the terminal.
 
 Feel free to check out the code!
