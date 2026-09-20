@@ -1,6 +1,6 @@
 # My Python Projects
 
-Hi! I'm **Bhaskar Bahukhandi**, a first-year BTech CSE (AI & ML) student at Graphic Era Deemed University. 
+Hi! I'm **Bhaskar Bahukhandi**, a second-year BTech CSE (AI & ML) student at Graphic Era Deemed University. 
 
 This repository contains some of the initial Python projects I built while getting hands-on with programming, logic building, and basic computer science concepts. I made these to practice what I'm learning and to get comfortable writing actual code instead of just reading theory.
 
@@ -16,7 +16,7 @@ A conversational terminal-based chatbot written entirely in Python. I built this
 - Run a 5-question tech quiz and keep score
 - Tell the current time and date
 
-*Note: It's currently rule-based, but since my major is AI & ML, I plan to eventually upgrade this to use real Natural Language Processing (NLP) or an API!*
+*Note: It's currently rule-based, but I plan to eventually upgrade this to use real Natural Language Processing (NLP) or an API*
 
 ## 2. Student Data Management System
 A console-based CRUD (Create, Read, Update, Delete) application. I built this to practice working with Python dictionaries, lists, and File I/O.
