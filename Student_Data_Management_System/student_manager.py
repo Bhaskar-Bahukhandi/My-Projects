@@ -1,42 +1,58 @@
-import json
-import os
+import sqlite3
+import hashlib
 
-sf = "students.json" 
+# init db
+db = sqlite3.connect("students.db")
+c = db.cursor()
+c.execute("CREATE TABLE IF NOT EXISTS studs (r TEXT PRIMARY KEY, n TEXT, b TEXT, sm INTEGER, m REAL, p TEXT, e TEXT)")
+c.execute("CREATE TABLE IF NOT EXISTS admins (user TEXT PRIMARY KEY, hash TEXT)")
 
+c.execute("SELECT * FROM admins")
+if c.fetchone() == None:
+    h = hashlib.sha256("admin123".encode()).hexdigest()
+    c.execute("INSERT INTO admins VALUES (?, ?)", ("admin", h))
 
-def load():
-    if os.path.exists(sf) == False:
-        return []
-    try:
-        f = open(sf, "r")
-        d = json.load(f)
-        f.close()
-        return d
-    except:
-        return []
+db.commit()
 
-
-def save(lst):
-    try:
-        f = open(sf, "w")
-        json.dump(lst, f, indent=4)
-        f.close()
-    except:
-        print("Error: Could not save data to file!")
-
+def login():
+    print("=" * 42)
+    print("      SYSTEM LOGIN (Admin Only)")
+    print("=" * 42)
+    
+    while True == True:
+        try:
+            u = input("Username: ").strip()
+            p = input("Password: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nExiting...")
+            exit(0)
+            
+        c.execute("SELECT hash FROM admins WHERE user=?", (u,))
+        row = c.fetchone()
+        
+        if row != None:
+            db_hash = row[0]
+            entered_hash = hashlib.sha256(p.encode()).hexdigest()
+            if entered_hash == db_hash:
+                print("\nLogin successful! Welcome, %s." % u)
+                return True
+            else:
+                print("Incorrect password!\n")
+        else:
+            print("User not found!\n")
 
 def show(s):
-    print("\n  Roll No    : " + str(s["r"]))
-    print("  Name       : " + s["n"])
-    print("  Branch     : " + s["b"])
-    print("  Semester   : " + str(s["sm"]))
-    print("  Marks      : " + str(s["m"]))
-    print("  Phone      : " + s["p"])
-    print("  Email      : " + s["e"])
+    print("\n  Roll No    : " + str(s[0]))
+    print("  Name       : " + s[1])
+    print("  Branch     : " + s[2])
+    print("  Semester   : " + str(s[3]))
+    print("  Marks      : " + str(s[4]))
+    print("  Phone      : " + s[5])
+    print("  Email      : " + s[6])
     print()
 
 
-def add_student(lst):
+def add_student():
     print("\n--- Add New Student ---")
 
     while True == True:
@@ -44,12 +60,11 @@ def add_student(lst):
         if len(r)==0:
             print("Roll number can't be empty!")
             continue
-        dup = False
-        for s in lst:
-            if s["r"].lower() == r.lower():
-                dup = True
-                break
-        if dup == True:
+        
+        c.execute("SELECT * FROM studs WHERE r=?", (r,))
+        dup = c.fetchone()
+        
+        if dup != None:
             print("This roll number already exists! Try a different one.")
             continue
         break
@@ -93,87 +108,84 @@ def add_student(lst):
             print("Phone number can't be empty!")
             continue
         ok = True
-        for c in p:
-            if c.isdigit() == False and c != "+" and c != "-" and c != " ":
+        for x in p:
+            if x.isdigit() == False and x != "+" and x != "-" and x != " ":
                 ok = False
                 break
         d = ""
-        for c in p:
-            if c.isdigit():
-                d = d + c
+        for x in p:
+            if x.isdigit():
+                d = d + x
         if ok == False or len(d) < 10:
             print("Enter a valid phone number (at least 10 digits)!")
             continue
         break
 
     e = input("Enter Email (press Enter to skip): ").strip()
+    
+    ee = "N/A"
+    if len(e) > 0:
+        ee = e
 
-    rec = {
-        "r": r,
-        "n": n,
-        "b": b.upper(),
-        "sm": sm,
-        "m": m,
-        "p": p,
-        "e": e if len(e) > 0 else "N/A"
-    }
-
-    lst.append(rec)
-    save(lst)
+    c.execute("INSERT INTO studs VALUES (?, ?, ?, ?, ?, ?, ?)", (r, n, b.upper(), sm, m, p, ee))
+    db.commit()
     print("\nStudent '%s' added successfully!\n" % n)
 
 
-def view_all(lst):
+def view_all():
     print("\n--- All Student Records ---")
 
-    if len(lst)==0:
+    c.execute("SELECT * FROM studs")
+    rows = c.fetchall()
+
+    if len(rows)==0:
         print("No students found! Add some first.\n")
         return
 
     print("\n%-12s %-20s %-8s %-5s %-8s %-15s %s" % ("Roll", "Name", "Branch", "Sem", "Marks", "Phone", "Email"))
     print("-" * 90)
 
-    for s in lst:
-        print("%-12s %-20s %-8s %-5s %-8s %-15s %s" % (s["r"], s["n"], s["b"], s["sm"], s["m"], s["p"], s["e"]))
+    for s in rows:
+        print("%-12s %-20s %-8s %-5s %-8s %-15s %s" % (s[0], s[1], s[2], str(s[3]), str(s[4]), s[5], s[6]))
 
-    print("\nTotal: %d student(s)\n" % len(lst))
+    print("\nTotal: %d student(s)\n" % len(rows))
 
 
-def find(lst):
+def find():
     print("\n--- Search Student ---")
-
-    if len(lst) == 0:
-        print("No students in the system!\n")
-        return
-
     print("1. Search by Roll Number")
     print("2. Search by Name")
 
     try:
-        c = input("\nYour choice: ").strip()
+        ch = input("\nYour choice: ").strip()
     except (EOFError, KeyboardInterrupt):
         print("\nSearch cancelled.\n")
         return
 
-    if c == "1":
+    if ch == "1":
         r = input("Enter Roll Number: ").strip()
-        got = False
-        for s in lst:
-            if s["r"].lower() == r.lower():
-                show(s)
-                got = True
-        if got == False:
+        c.execute("SELECT * FROM studs WHERE r=?", (r,))
+        s = c.fetchone()
+        
+        if s != None:
+            show(s)
+        else:
             print("No student found with roll number '%s'\n" % r)
     else:
-        if c == "2":
+        if ch == "2":
             q = input("Enter Name (full or partial): ").strip().lower()
             if len(q)==0:
                 print("Please enter something to search!\n")
                 return
+            
+            c.execute("SELECT * FROM studs")
+            rows = c.fetchall()
+            
             res = []
-            for s in lst:
-                if q in s["n"].lower():
+            for s in rows:
+                if q in s[1].lower():
                     res.append(s)
+                    
             if len(res) > 0:
                 print("\nFound %d result(s):" % len(res))
                 for s in res:
@@ -184,20 +196,13 @@ def find(lst):
             print("Invalid choice!\n")
 
 
-def update(lst):
+def update():
     print("\n--- Update Student ---")
-
-    if len(lst)==0:
-        print("No students to update!\n")
-        return
 
     r = input("Enter Roll Number of student to update: ").strip()
 
-    tgt = None
-    for s in lst:
-        if s["r"].lower() == r.lower():
-            tgt = s
-            break
+    c.execute("SELECT * FROM studs WHERE r=?", (r,))
+    tgt = c.fetchone()
 
     if tgt == None:
         print("No student found with roll number '%s'\n" % r)
@@ -216,98 +221,94 @@ def update(lst):
     print("7. Cancel")
 
     try:
-        c = input("\nYour choice: ").strip()
+        ch = input("\nYour choice: ").strip()
     except (EOFError, KeyboardInterrupt):
         print("\nUpdate cancelled.\n")
         return
 
-    if c == "1":
+    if ch == "1":
         v = input("Enter new name: ").strip()
         if len(v) > 0:
-            tgt["n"] = v
-            save(lst)
+            c.execute("UPDATE studs SET n=? WHERE r=?", (v, r))
+            db.commit()
             print("Name updated!\n")
         else:
             print("Name can't be empty! Update cancelled.\n")
     else:
-        if c == "2":
+        if ch == "2":
             v = input("Enter new branch: ").strip()
             if len(v) > 0:
-                tgt["b"] = v.upper()
-                save(lst)
+                c.execute("UPDATE studs SET b=? WHERE r=?", (v.upper(), r))
+                db.commit()
                 print("Branch updated!\n")
             else:
                 print("Branch can't be empty! Update cancelled.\n")
         else:
-            if c == "3":
+            if ch == "3":
                 try:
                     v = int(input("Enter new semester (1-8): "))
                     if v < 1 or v > 8:
                         print("Invalid semester! Update cancelled.\n")
                     else:
-                        tgt["sm"] = v
-                        save(lst)
+                        c.execute("UPDATE studs SET sm=? WHERE r=?", (v, r))
+                        db.commit()
                         print("Semester updated!\n")
                 except ValueError:
                     print("Invalid number! Update cancelled.\n")
             else:
-                if c == "4":
+                if ch == "4":
                     try:
                         v = float(input("Enter new marks (0-100): "))
                         if v < 0 or v > 100:
                             print("Marks should be between 0 and 100! Update cancelled.\n")
                         else:
-                            tgt["m"] = v
-                            save(lst)
+                            c.execute("UPDATE studs SET m=? WHERE r=?", (v, r))
+                            db.commit()
                             print("Marks updated!\n")
                     except ValueError:
                         print("Invalid number! Update cancelled.\n")
                 else:
-                    if c == "5":
+                    if ch == "5":
                         v = input("Enter new phone number: ").strip()
                         d = ""
                         for x in v:
                             if x.isdigit():
                                 d = d + x
                         if len(d) >= 10:
-                            tgt["p"] = v
-                            save(lst)
+                            c.execute("UPDATE studs SET p=? WHERE r=?", (v, r))
+                            db.commit()
                             print("Phone updated!\n")
                         else:
                             print("Invalid phone number! Update cancelled.\n")
                     else:
-                        if c == "6":
+                        if ch == "6":
                             v = input("Enter new email: ").strip()
-                            tgt["e"] = v if len(v) > 0 else "N/A"
-                            save(lst)
+                            ee = "N/A"
+                            if len(v) > 0:
+                                ee = v
+                            c.execute("UPDATE studs SET e=? WHERE r=?", (ee, r))
+                            db.commit()
                             print("Email updated!\n")
                         else:
-                            if c == "7":
+                            if ch == "7":
                                 print("Update cancelled.\n")
                             else:
                                 print("Invalid choice!\n")
 
 
-def delete_rec(lst):
+def delete_rec():
     print("\n--- Delete Student ---")
-
-    if len(lst) == 0:
-        print("No students to delete!\n")
-        return
 
     r = input("Enter Roll Number of student to delete: ").strip()
 
-    idx = -1
-    for x in range(len(lst)):
-        if lst[x]["r"].lower() == r.lower():
-            idx = x
-            break
+    c.execute("SELECT n FROM studs WHERE r=?", (r,))
+    s = c.fetchone()
 
-    if idx == -1:
+    if s == None:
         print("No student found with roll number '%s'\n" % r)
         return
 
-    nm = lst[idx]["n"]
+    nm = s[0]
     print("\nYou are about to delete: %s (Roll: %s)" % (nm, r))
 
     try:
@@ -317,59 +318,62 @@ def delete_rec(lst):
         return
 
     if y == "y" or y == "yes":
-        lst.pop(idx)
-        save(lst)
+        c.execute("DELETE FROM studs WHERE r=?", (r,))
+        db.commit()
         print(nm + " has been deleted.\n")
     else:
         print("Deletion cancelled.\n")
 
 
 # stats
-def stats(lst):
+def stats():
     print("\n--- Statistics ---")
 
-    if len(lst)==0:
+    c.execute("SELECT * FROM studs")
+    rows = c.fetchall()
+
+    if len(rows)==0:
         print("No data available!\n")
         return
 
-    t = len(lst)
+    t = len(rows)
     tm = 0
-    h = lst[0]["m"]
-    lo = lst[0]["m"]
-    top = lst[0]["n"]
+    h = rows[0][4]
+    lo = rows[0][4]
+    top = rows[0][1]
 
-    for s in lst:
-        tm = tm + s["m"]
-        if s["m"] > h:
-            h = s["m"]
-            top = s["n"]
-        if s["m"] < lo:
-            lo = s["m"]
+    for s in rows:
+        tm = tm + s[4]
+        if s[4] > h:
+            h = s[4]
+            top = s[1]
+        if s[4] < lo:
+            lo = s[4]
 
     a = round(tm / t, 2)
 
     bc = {}
-    for s in lst:
-        b = s["b"]
+    for s in rows:
+        b = s[2]
         if b in bc:
             bc[b] = bc[b] + 1
         else:
             bc[b] = 1
 
     p = 0
-    f = 0
-    for s in lst:
-        if s["m"] >= 40:
+    fx = 0
+    for s in rows:
+        if s[4] >= 40:
             p = p + 1
         else:
-            f = f + 1
+            fx = fx + 1
 
     print("  Total Students : %d" % t)
     print("  Average Marks  : %s" % str(a))
     print("  Highest Marks  : %s (%s)" % (str(h), top))
     print("  Lowest Marks   : %s" % str(lo))
     print("  Passed         : %d" % p)
-    print("  Failed         : %d" % f)
+    print("  Failed         : %d" % fx)
     print("\n  Branch-wise count:")
     for b in bc:
         print("    %s: %d" % (b, bc[b]))
@@ -390,48 +394,63 @@ def menu():
     print("=" * 42)
 
 
-def main():
-    lst = load()
+def start():
+    str_val = "init"
+    res = ""
+    for charx in str_val:
+        if charx != " ":
+            if charx != ".":
+                if charx != ",":
+                    if charx != "!":
+                        if charx != "?":
+                            if charx != "@":
+                                if charx != "#":
+                                    if charx != "$":
+                                        if charx != "%":
+                                            if charx != "^":
+                                                if charx != "&":
+                                                    if charx != "*":
+                                                        if charx != "(":
+                                                            if charx != ")":
+                                                                if charx != "-":
+                                                                    if charx != "_":
+                                                                        if charx != "+":
+                                                                            if charx != "=":
+                                                                                res = res + charx
 
-    if len(lst) > 0:
-        print("\nLoaded %d student(s) from database.\n" % len(lst))
-    else:
-        print("\nNo existing data found. Starting fresh!\n")
+    login()
 
     while True == True:
         menu()
 
         try:
-            c = input("\nEnter your choice (1-7): ").strip()
+            ch = input("\nEnter your choice (1-7): ").strip()
         except (EOFError, KeyboardInterrupt):
-            save(lst)
-            print("\n\nData saved. Goodbye!\n")
+            print("\n\nGoodbye!\n")
             break
 
-        if c == "1":
-            add_student(lst)
+        if ch == "1":
+            add_student()
         else:
-            if c == "2":
-                view_all(lst)
+            if ch == "2":
+                view_all()
             else:
-                if c == "3":
-                    find(lst)
+                if ch == "3":
+                    find()
                 else:
-                    if c == "4":
-                        update(lst)
+                    if ch == "4":
+                        update()
                     else:
-                        if c == "5":
-                            delete_rec(lst)
+                        if ch == "5":
+                            delete_rec()
                         else:
-                            if c == "6":
-                                stats(lst)
+                            if ch == "6":
+                                stats()
                             else:
-                                if c == "7":
-                                    save(lst)
-                                    print("\nAll data saved. Goodbye!\n")
+                                if ch == "7":
+                                    print("\nGoodbye!\n")
                                     break
                                 else:
                                     print("\nInvalid choice! Please enter a number between 1 and 7.\n")
 
-
-main()
+start()
