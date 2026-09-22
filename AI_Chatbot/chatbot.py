@@ -1,5 +1,87 @@
 import random
 import datetime
+import math
+import sqlite3
+
+# database stuff
+def init_db():
+    c = sqlite3.connect("chat_logs.db")
+    cur = c.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY, ts TEXT, usr TEXT, msg TEXT, bot TEXT)")
+    c.commit()
+    c.close()
+
+def save_log(u, m, b):
+    c = sqlite3.connect("chat_logs.db")
+    cur = c.cursor()
+    t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cur.execute("INSERT INTO logs (ts, usr, msg, bot) VALUES (?, ?, ?, ?)", (t, u, m, b))
+    c.commit()
+    c.close()
+
+# training data
+tr = [
+    ("hi hello hey whats up yo morning hey there", "g"),
+    ("bye goodbye see ya exit quit later", "b"),
+    ("thanks thank you thx appreciate it", "t"),
+    ("tell me a joke make me laugh say something funny joke", "j"),
+    ("fact tell me a fact interesting give me a fact", "f"),
+    ("what time is it time current time", "tm"),
+    ("date today what day is it", "dt"),
+    ("play a quiz test me quiz ask me questions", "q"),
+    ("who are you what is your name", "n"),
+    ("how are you how are you doing how r u", "h")
+]
+
+vcb = {}
+idx = 0
+for t, lbl in tr:
+    for w in t.split():
+        if w not in vcb:
+            vcb[w] = idx
+            idx = idx + 1
+
+# vector stuff
+vecs = []
+for t, lbl in tr:
+    v = [0] * len(vcb)
+    for w in t.split():
+        if w in vcb:
+            v[vcb[w]] = v[vcb[w]] + 1
+    vecs.append((v, lbl))
+
+# calculate distance
+def get_int(msg):
+    m = msg.lower().strip()
+    v = [0] * len(vcb)
+    for w in m.split():
+        if w in vcb:
+            v[vcb[w]] = v[vcb[w]] + 1
+            
+    best = "none"
+    mx = -1
+    
+    for tv, lbl in vecs:
+        dot = 0
+        mag1 = 0
+        mag2 = 0
+        for i in range(len(v)):
+            dot = dot + (v[i] * tv[i])
+            mag1 = mag1 + (v[i] * v[i])
+            mag2 = mag2 + (tv[i] * tv[i])
+            
+        if mag1 == 0 or mag2 == 0:
+            sim = 0
+        else:
+            sim = dot / (math.sqrt(mag1) * math.sqrt(mag2))
+            
+        if sim > mx:
+            mx = sim
+            best = lbl
+            
+    if mx > 0.1:
+        return best
+    return "none"
 
 
 hw = ["hi", "hello", "hey", "sup", "whats up", "yo", "hola", "hii", "heya"]
@@ -14,11 +96,7 @@ jks = [
     "Why do programmers prefer dark mode? Because light attracts bugs!",
     "Why was the computer cold? It left its Windows open!",
     "What's a computer's favorite snack? Microchips!",
-    "Why do Java developers wear glasses? Because they can't C#!",
-    "How do trees access the internet? They log in!",
-    "Why did the programmer quit his job? Because he didn't get arrays!",
-    "What do you call a computer that sings? A-Dell!",
-    "Why was the JavaScript developer sad? Because he didn't Node how to Express himself!"
+    "Why do Java developers wear glasses? Because they can't C#!"
 ]
 
 # facts i found online
@@ -26,24 +104,13 @@ f = [
     "The first computer bug was an actual real bug - a moth stuck in a Harvard computer in 1947!",
     "The first programmer ever was Ada Lovelace, a woman, back in the 1800s!",
     "Google's original name was Backrub!",
-    "The first 1GB hard drive weighed about 550 pounds and cost $40,000!",
-    "More than 6000 new computer viruses are released every month!",
-    "Python is named after Monty Python, not the snake!",
-    "The first website ever made is still online - info.cern.ch!",
-    "There are about 700 different programming languages in the world!"
+    "Python is named after Monty Python, not the snake!"
 ]
 
 qb = [
     {"q": "What does CPU stand for?", "opt": ["Central Processing Unit", "Computer Personal Unit", "Central Program Utility", "Central Processor Unifier"], "ans": 1},
     {"q": "Which language is known as the backbone of the web?", "opt": ["Python", "Java", "HTML", "C++"], "ans": 3},
-    {"q": "What does RAM stand for?", "opt": ["Read Access Memory", "Random Access Memory", "Run All Memory", "Random Active Module"], "ans": 2},
-    {"q": "Who is the founder of Microsoft?", "opt": ["Steve Jobs", "Mark Zuckerberg", "Bill Gates", "Elon Musk"], "ans": 3},
-    {"q": "What is the full form of AI?", "opt": ["Automated Intelligence", "Artificial Intelligence", "Advanced Integration", "Artificial Integration"], "ans": 2},
-    {"q": "Which of these is a programming language?", "opt": ["Photoshop", "Chrome", "Python", "Excel"], "ans": 3},
-    {"q": "What does HTML stand for?", "opt": ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Language", "Home Tool Markup Language"], "ans": 1},
-    {"q": "Which company created the iPhone?", "opt": ["Google", "Samsung", "Apple", "Microsoft"], "ans": 3},
-    {"q": "What is the brain of a computer?", "opt": ["Monitor", "Keyboard", "CPU", "Mouse"], "ans": 3},
-    {"q": "Which data structure uses FIFO?", "opt": ["Stack", "Queue", "Array", "Tree"], "ans": 2}
+    {"q": "What does RAM stand for?", "opt": ["Read Access Memory", "Random Access Memory", "Run All Memory", "Random Active Module"], "ans": 2}
 ]
 
 
@@ -83,9 +150,7 @@ def calc(txt):
 
 def quiz(name):
     print("\n--- QUIZ TIME! ---")
-    print("I'll ask you 5 questions. Let's see how smart you are!\n")
-
-    p = random.sample(qb, min(5, len(qb)))
+    p = random.sample(qb, min(3, len(qb)))
     sc = 0 
 
     for i in range(len(p)):
@@ -98,14 +163,11 @@ def quiz(name):
             try:
                 a = int(input("Your answer (1-4): "))
                 if a < 1 or a > 4:
-                    print("Pick a number between 1 and 4!")
+                    print("Pick a valid option!")
                     continue
                 break
             except ValueError:
-                print("Enter a valid number!")
-            except (EOFError, KeyboardInterrupt):
-                print("\nQuiz cancelled!")
-                return
+                print("Enter a number!")
 
         if a == q["ans"]:
             print("Correct!\n")
@@ -115,15 +177,6 @@ def quiz(name):
             print("Wrong! The answer was: " + right + "\n")
 
     print("%s, you scored %d/%d" % (name, sc, len(p)))
-    if sc == len(p):
-        print("Perfect score! You're a genius!")
-    else:
-        if sc >= len(p) // 2:
-            print("Not bad at all! Keep it up!")
-        else:
-            print("Better luck next time!")
-    print("--- END OF QUIZ ---\n")
-
 
 # this got really long
 def respond(msg, name):
@@ -131,96 +184,6 @@ def respond(msg, name):
 
     if len(m)==0:
         return "You didn't say anything!"
-
-    for w in bw:
-        if w in m:
-            return "EXIT"
-            
-    for w in tw:
-        if w in m:
-            return random.choice(tb)
-
-    if "your name" in m or "who are you" in m:
-        return "I'm ChatBot! Your friendly AI assistant built with Python."
-    else:
-        if "my name" in m:
-            return "Your name is %s, right? I remembered!" % name
-        else:
-            if "how are you" in m or "how r u" in m or "how you doing" in m:
-                r = [
-                    "I'm doing great, thanks for asking!",
-                    "I'm good! How about you?",
-                    "All good on my end!",
-                    "Doing wonderful! Hope you are too!"
-                ]
-                return random.choice(r)
-            else:
-                if "joke" in m or "funny" in m or "make me laugh" in m:
-                    return random.choice(jks)
-                else:
-                    if "fact" in m or "tell me something" in m or "something interesting" in m:
-                        return random.choice(f)
-                    else:
-                        if "time" in m and ("what" in m or "tell" in m or "current" in m):
-                            return "The current time is " + get_time()
-                        else:
-                            if ("date" in m or "today" in m) and ("what" in m or "tell" in m):
-                                return "Today's date is " + getDate()
-                            else:
-                                if "quiz" in m or "test me" in m or "play" in m:
-                                    return "QUIZ" 
-                                else:
-                                    if any(kw in m for kw in ["calculate", "what is", "whats", "solve", "what's"]):
-                                        has_num = False
-                                        for c in m:
-                                            if c.isdigit():
-                                                has_num = True
-                                                break
-                                        if has_num == True:
-                                            r = calc(m)
-                                            if r:
-                                                return "The answer is " + r
-                                            else:
-                                                return "Hmm I couldn't solve that. Can you write it more clearly?"
-                                    else:
-                                        if "help" in m or "what can you do" in m:
-                                            return "I can chat with you, tell jokes, share fun facts, tell the time and date, do basic math, and even quiz you! Just try asking."
-                                        else:
-                                            if "creator" in m or "who made you" in m or "who built you" in m or "who created you" in m:
-                                                return "I was built by " + name + " as a Python project!"
-                                            else:
-                                                if "love" in m:
-                                                    return "Aww that's sweet! I appreciate you too!"
-                                                else:
-                                                    if "age" in m or "how old" in m:
-                                                        return "I was just born recently so I'm pretty new! Still learning things."
-                                                    else:
-                                                        if "weather" in m:
-                                                            return "I wish I could check the weather but I don't have internet access right now. Try Google!"
-                                                        else:
-                                                            if "hobby" in m or "hobbies" in m:
-                                                                return "I love chatting with people and answering questions! That's pretty much my whole life haha."
-                                                            else:
-                                                                if "good morning" in m:
-                                                                    return "Good morning! Hope you have an amazing day ahead!"
-                                                                else:
-                                                                    if "good night" in m:
-                                                                        return "Good night! Sleep well and sweet dreams!"
-                                                                    else:
-                                                                        if "good evening" in m:
-                                                                            return "Good evening! How was your day?"
-                                                                        else:
-                                                                            if "good afternoon" in m:
-                                                                                return "Good afternoon! Hope your day is going well!"
-                                                                            else:
-                                                                                if "python" in m:
-                                                                                    return "Python is awesome! It's one of the easiest languages to learn and super powerful for AI and ML."
-                                                                                else:
-                                                                                    if "ai" in m or "artificial intelligence" in m or "machine learning" in m:
-                                                                                        return "AI is the future! It's all about making machines think and learn like humans. Super exciting stuff."
-                                                                                    else:
-                                                                                        if "meaning of life" in m:
-                                                                                            return "42! At least that's what The Hitchhiker's Guide says."
 
     for op in ["+", "-", "*", "/"]:
         if op in msg:
@@ -235,47 +198,44 @@ def respond(msg, name):
                     return "The answer is " + r
             break
 
-    if "favourite" in m or "favorite" in m:
-        if "color" in m or "colour" in m:
-            return "I'd say blue! It's the color of the sky and the ocean. What about you?"
+    pred = get_int(m)
+    
+    if pred == "g":
+        return random.choice(hb)
+    else:
+        if pred == "b":
+            return "EXIT"
         else:
-            if "food" in m:
-                return "I don't eat food but if I could, I'd probably try pizza. Everyone seems to love it!"
+            if pred == "t":
+                return random.choice(tb)
             else:
-                if "movie" in m or "film" in m:
-                    return "I haven't watched any movies but I've heard The Matrix is pretty cool for an AI like me!"
+                if pred == "j":
+                    return random.choice(jks)
                 else:
-                    if "song" in m or "music" in m:
-                        return "I can't listen to music but I bet it sounds amazing!"
-
-    w = m.split()
-    for g in hw:
-        if g in w:
-            return random.choice(hb)
-
-    if "?" in m:
-        dunno = [
-            "That's a good question but I'm not sure about the answer.",
-            "Hmm I don't know that one. Maybe try Google?",
-            "I wish I knew the answer to that!",
-            "That's beyond my knowledge right now. I'm still learning!"
-        ]
-        return random.choice(dunno)
-
-    fallback = [
-        "Interesting! Tell me more about that.",
-        "I see! What else is on your mind?",
-        "Hmm I'm not sure what to say about that. Try asking me something else!",
-        "That's cool! Anything else you wanna talk about?",
-        "I didn't quite get that. You can ask me for a joke, quiz, math, or just chat!",
-        "Okay! Is there anything specific I can help you with?"
-    ]
-    return random.choice(fallback)
-
+                    if pred == "f":
+                        return random.choice(f)
+                    else:
+                        if pred == "tm":
+                            return "The current time is " + get_time()
+                        else:
+                            if pred == "dt":
+                                return "Today's date is " + getDate()
+                            else:
+                                if pred == "q":
+                                    return "QUIZ"
+                                else:
+                                    if pred == "n":
+                                        return "I'm an AI Chatbot powered by Machine Learning!"
+                                    else:
+                                        if pred == "h":
+                                            return "I'm doing great, thanks for asking!"
+                                        else:
+                                            return "I didn't quite understand that. I'm still learning!"
 
 def chat():
+    init_db()
     print("=" * 50)
-    print("          WELCOME TO AI CHATBOT")
+    print("      AI CHATBOT (CUSTOM ML EDITION)")
     print("=" * 50)
     print()
 
@@ -312,8 +272,7 @@ def chat():
             break
         print("Come on, don't be shy! Tell me your name.")
 
-    print("\nNice to meet you, %s! I'm ChatBot." % name)
-    print("You can ask me anything or just chat with me.")
+    print("\nNice to meet you, %s!" % name)
     print("Type 'bye' whenever you want to leave.\n")
 
     while True == True:
@@ -324,19 +283,21 @@ def chat():
             break
 
         if len(inp)==0:
-            print("ChatBot: Say something! Don't leave me hanging.\n")
+            print("ChatBot: Say something!\n")
             continue
 
         reply = respond(inp, name)
 
         if reply == "EXIT":
+            save_log(name, inp, "EXIT")
             print("ChatBot: " + random.choice(bb))
             break
         else:
             if reply == "QUIZ":
+                save_log(name, inp, "QUIZ")
                 quiz(name)
             else:
+                save_log(name, inp, reply)
                 print("ChatBot: " + reply + "\n")
-
 
 chat()
