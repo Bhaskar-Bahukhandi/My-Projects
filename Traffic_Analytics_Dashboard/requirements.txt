@@ -1,0 +1,10 @@
+# Ultralytics provides the official YOLOv8 API
+ultralytics
+
+# OpenCV for video processing and frame manipulation
+opencv-python
+
+# Standard data science libraries
+numpy
+pandas
+matplotlib
