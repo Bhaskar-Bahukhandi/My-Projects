@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: ats_api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    # Map the current folder to /app so you can edit code without rebuilding the container
+    volumes:
+      - .:/app
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - ats_network
+
+  frontend:
+    build: .
+    container_name: ats_frontend
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      # Docker networking magic: 'api' resolves to the FastAPI container's IP automatically!
+      - API_URL=http://api:8000
+    volumes:
+      - .:/app
+    command: streamlit run src/dashboard.py
+    depends_on:
+      - api
+    networks:
+      - ats_network
+
+networks:
+  ats_network:
+    driver: bridge
